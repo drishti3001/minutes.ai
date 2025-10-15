@@ -89,7 +89,7 @@ minutes.ai/
 
 #### **1. Clone the Repository**
 ```bash
-git clone https://github.com/<drishti3001>/minutes.ai.git
+git clone https://github.com/drishti3001/minutes.ai.git
 
 cd minutes.ai
 
