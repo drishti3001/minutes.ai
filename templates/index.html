@@ -3,65 +3,168 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Minutes.ai - Intelligent Meeting Summaries</title>
-    
+    <title>TL;DR - Intelligent Summaries</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
-    
 </head>
 <body>
 
     <div class="container">
         <div class="card">
             <div class="header">
-                <h1>Minutes.ai</h1>
-                <p>Where conversations become actions...</p>
+                <h1>TL;DR</h1>
+                <p>Where conversations, videos, and text become actions...</p>
             </div>
-            
-            <form class="upload-form" action="/upload" method="post" enctype="multipart/form-data">
-                <label for="audio_file" class="file-label">
-                    <div>
-                        <span>Click to upload a file</span>
-                        <p>.mp3, .wav, .m4a</p>
-                    </div>
-                </label>
-                <input type="file" name="audio_file" id="audio_file" class="file-input" required>
-                
-                <input type="submit" value="Summarize Meeting" class="submit-btn">
-            </form>
+
+            <div class="tab-buttons">
+                <button class="tab-btn {% if default_tab == 'audio' %}active{% endif %}" data-tab="audio">Audio</button>
+                <button class="tab-btn {% if default_tab == 'video' %}active{% endif %}" data-tab="video">Video</button>
+                <button class="tab-btn {% if default_tab == 'text' %}active{% endif %}" data-tab="text">Text</button>
+            </div>
+
+            <!-- AUDIO TAB -->
+            <div class="tab-content {% if default_tab == 'audio' %}active{% endif %}" id="audio">
+                <form class="upload-form" action="/upload_audio" method="post" enctype="multipart/form-data">
+                    <label for="audio_file" class="file-label">
+                        <div>
+                            <span>Click to upload an audio file</span>
+                            <p>.mp3, .wav, .m4a</p>
+                        </div>
+                    </label>
+                    <input type="file" name="audio_file" id="audio_file" class="file-input" accept="audio/*" required>
+                    {% if uploaded_audio %}
+                        <audio controls class="preview-player">
+                            <source src="{{ url_for('static', filename=uploaded_audio) }}" type="audio/mpeg">
+                            Your browser does not support the audio element.
+                        </audio>
+                    {% endif %}
+                    <input type="submit" value="Summarize Audio" class="submit-btn">
+                </form>
+
+                {% if default_tab == 'audio' and summary_data %}
+                <div class="card results-card">
+                    <h2>Audio Summary</h2>
+                    <p>{{ summary_data.summary }}</p>
+
+                    {% if summary_data.decisions %}
+                        <h2>Key Decisions</h2>
+                        <ul>
+                            {% for decision in summary_data.decisions %}
+                                <li>{{ decision }}</li>
+                            {% endfor %}
+                        </ul>
+                    {% endif %}
+
+                    {% if summary_data.action_items %}
+                        <h2>Action Items</h2>
+                        <ul>
+                            {% for item in summary_data.action_items %}
+                                <li>{{ item }}</li>
+                            {% endfor %}
+                        </ul>
+                    {% endif %}
+                </div>
+                {% endif %}
+            </div>
+
+            <!-- VIDEO TAB -->
+            <div class="tab-content {% if default_tab == 'video' %}active{% endif %}" id="video">
+                <form class="upload-form" action="/upload_video" method="post" enctype="multipart/form-data">
+                    <label for="video_file" class="file-label">
+                        <div>
+                            <span>Click to upload a video file</span>
+                            <p>.mp4, .mov, .avi</p>
+                        </div>
+                    </label>
+                    <input type="file" name="video_file" id="video_file" class="file-input" accept="video/*" required>
+                    {% if uploaded_video %}
+                        <video controls class="preview-player">
+                            <source src="{{ url_for('static', filename=uploaded_video) }}" type="video/mp4">
+                            Your browser does not support the video element.
+                        </video>
+                    {% endif %}
+                    <input type="submit" value="Summarize Video" class="submit-btn">
+                </form>
+
+                {% if default_tab == 'video' and summary_data %}
+                <div class="card results-card">
+                    <h2>Video Summary</h2>
+                    <p>{{ summary_data.summary }}</p>
+
+                    {% if summary_data.decisions %}
+                        <h2>Key Decisions</h2>
+                        <ul>
+                            {% for decision in summary_data.decisions %}
+                                <li>{{ decision }}</li>
+                            {% endfor %}
+                        </ul>
+                    {% endif %}
+
+                    {% if summary_data.action_items %}
+                        <h2>Action Items</h2>
+                        <ul>
+                            {% for item in summary_data.action_items %}
+                                <li>{{ item }}</li>
+                            {% endfor %}
+                        </ul>
+                    {% endif %}
+                </div>
+                {% endif %}
+            </div>
+
+            <!-- TEXT TAB -->
+            <div class="tab-content {% if default_tab == 'text' %}active{% endif %}" id="text">
+                <form class="upload-form" action="/summarize_text" method="post">
+                    <textarea name="text_input" class="text-input" placeholder="Paste your full transcript or text here...">{{ transcript if default_tab == 'text' else '' }}</textarea>
+                    <input type="submit" value="Summarize Text" class="submit-btn">
+                </form>
+
+                {% if default_tab == 'text' and summary_data %}
+                <div class="card results-card">
+                    <h2>Text Summary</h2>
+                    <p>{{ summary_data.summary }}</p>
+
+                    {% if summary_data.decisions %}
+                        <h2>Key Decisions</h2>
+                        <ul>
+                            {% for decision in summary_data.decisions %}
+                                <li>{{ decision }}</li>
+                            {% endfor %}
+                        </ul>
+                    {% endif %}
+
+                    {% if summary_data.action_items %}
+                        <h2>Action Items</h2>
+                        <ul>
+                            {% for item in summary_data.action_items %}
+                                <li>{{ item }}</li>
+                            {% endfor %}
+                        </ul>
+                    {% endif %}
+                </div>
+                {% endif %}
+            </div>
         </div>
-
-        {% if transcript %}
-        <div class="card results-card">
-            <h2>Transcript</h2>
-            <p class="transcript-text">{{ transcript }}</p>
-        </div>
-        {% endif %}
-
-        {% if summary_data %}
-        <div class="card results-card">
-            <h2>Summary</h2>
-            <p>{{ summary_data.summary }}</p>
-
-            {% if summary_data.decisions %}
-                <h2>Key Decisions</h2>
-                <ul>
-                    {% for decision in summary_data.decisions %}
-                        <li>{{ decision }}</li>
-                    {% endfor %}
-                </ul>
-            {% endif %}
-
-            {% if summary_data.action_items %}
-                <h2>Action Items</h2>
-                <ul>
-                    {% for item in summary_data.action_items %}
-                        <li>{{ item }}</li>
-                    {% endfor %}
-                </ul>
-            {% endif %}
-        </div>
-        {% endif %}
     </div>
+
+    <script>
+        // Tab switching
+        const tabButtons = document.querySelectorAll(".tab-btn");
+        const tabContents = document.querySelectorAll(".tab-content");
+
+        tabButtons.forEach(button => {
+            button.addEventListener("click", () => {
+                tabButtons.forEach(btn => btn.classList.remove("active"));
+                tabContents.forEach(content => content.classList.remove("active"));
+                button.classList.add("active");
+                document.getElementById(button.dataset.tab).classList.add("active");
+            });
+        });
+
+        // Set the correct tab active based on default_tab
+        const defaultTab = '{{ default_tab | default("audio") }}';
+        const activeButton = document.querySelector(`.tab-btn[data-tab="${defaultTab}"]`);
+        if (activeButton) activeButton.click();
+    </script>
 
 </body>
 </html>
