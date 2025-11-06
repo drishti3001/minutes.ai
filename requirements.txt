@@ -3,3 +3,9 @@ openai-whisper
 pydub
 google-generativeai
 python-dotenv
+moviepy
+pyannote.audio
+spacy
+textblob
+pytextrank
+ffmpeg-python
