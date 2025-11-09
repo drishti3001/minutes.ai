@@ -94,6 +94,10 @@ body {
 }
 
 /* Results Cards */
+.results-card {
+    margin-top: 25px;
+    animation: fadeIn 0.4s ease-in-out;
+}
 .results-card h2 {
     font-size: 1.8em;
     color: #333;
@@ -176,18 +180,29 @@ body {
     display: block;
 }
 
-/* Textarea */
+/* Textarea Input */
 .text-input {
     width: 100%;
-    min-height: 200px;
-    padding: 12px;
+    padding: 15px; /* Increased padding */
     border: 1px solid #dce1e6;
     border-radius: 8px;
     font-family: inherit;
     font-size: 1em;
-    resize: vertical;
-    box-sizing: border-box;
+    box-sizing: border-box; /* Ensures padding doesn't break width */
+    transition: border-color 0.2s ease, box-shadow 0.2s ease;
 }
+
+.text-input {
+    min-height: 200px;
+    resize: vertical;
+}
+
+.text-input:focus {
+    outline: none;
+    border-color: #5a67d8;
+    box-shadow: 0 0 0 3px rgba(90, 103, 216, 0.2);
+}
+
 
 /* --- Media Previews --- */
 .preview-player {
@@ -203,14 +218,115 @@ video.preview-player {
     object-fit: cover;
 }
 
-/* Small tweaks for result area */
-.results-card {
-    margin-top: 25px;
-    animation: fadeIn 0.4s ease-in-out;
-}
-
 /* Simple fade-in animation */
 @keyframes fadeIn {
     from { opacity: 0; transform: translateY(10px); }
     to { opacity: 1; transform: translateY(0); }
+}
+
+/* Accessibility */
+.sr-only {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+    border: 0;
+}
+/* --- ADD THESE STYLES TO THE END OF YOUR CSS FILE --- */
+
+/* Updated Collapsible & Content Styles */
+.collapsible {
+    margin-top: 20px; /* Add space above the button */
+}
+
+.collapsible.active {
+    /* Optional: style when active */
+    border-bottom-left-radius: 0;
+    border-bottom-right-radius: 0;
+    margin-bottom: 0;
+}
+
+/* Transcript Content Area */
+.transcript-content {
+    padding: 16px;
+    display: none;
+    overflow: hidden;
+    background-color: #f8f9fa;
+    border: 1px solid #e0e0e0;
+    border-radius: 8px;
+    margin-bottom: 20px;
+    /* Make it "stick" to the active button */
+    border-top-left-radius: 0;
+    border-top-right-radius: 0;
+    border-top: none;
+}
+.transcript-content pre {
+    white-space: pre-wrap; /* Allows text to wrap */
+    word-wrap: break-word; /* Breaks long words */
+    font-family: Menlo, Monaco, Consolas, "Courier New", monospace;
+    font-size: 0.9em;
+    color: #333;
+    margin: 0;
+    max-height: 400px; /* Limit height and make scrollable */
+    overflow-y: auto;
+}
+
+
+/* Q&A Section */
+.transcript-qa-section {
+    margin-top: 25px;
+    border-top: 1px solid #e0e0e0;
+    padding-top: 20px;
+}
+.qa-form {
+    margin-top: 20px;
+}
+.qa-form h3 {
+    font-size: 1.3em;
+    color: #333;
+    margin-top: 0;
+}
+.qa-form p {
+    font-size: 0.95em;
+    color: #606770;
+    margin-bottom: 15px;
+}
+.qa-input {
+    width: 100%;
+    padding: 12px;
+    border: 1px solid #dce1e6;
+    border-radius: 8px;
+    font-family: inherit;
+    font-size: 1em;
+    box-sizing: border-box;
+    transition: border-color 0.2s ease, box-shadow 0.2s ease;
+    margin-bottom: 15px;
+}
+.qa-input:focus {
+    outline: none;
+    border-color: #5a67d8;
+    box-shadow: 0 0 0 3px rgba(90, 103, 216, 0.2);
+}
+.qa-btn {
+    width: 100%;
+}
+
+/* Answer Display Area */
+.qa-answer {
+    margin-top: 20px;
+    padding: 15px;
+    background-color: #f8f9fa;
+    border: 1px solid #e0e0e0;
+    border-radius: 8px;
+    line-height: 1.6;
+    color: #3c4043;
+    display: none; /* Hide until it has content */
+}
+/* Show it once it has text */
+.qa-answer:not(:empty) {
+    display: block;
 }
