@@ -1,4 +1,4 @@
-from flask import Flask, render_template, request
+from flask import Flask, render_template, request, jsonify
 import os
 import whisper
 import ffmpeg
@@ -25,7 +25,7 @@ if not hf_token:
 genai.configure(api_key=api_key) #type:ignore
 warnings.filterwarnings("ignore")
 
-app = Flask(__name__)
+app = Flask(__name__, static_folder='static') 
 
 if not os.path.exists('uploads'):
     os.makedirs('uploads')
@@ -57,7 +57,6 @@ def prepare_audio_for_diarization(input_path):
     except Exception as e:
         print(f"Error standardizing audio: {e}")
         return None
-
 
 def diarize_audio(file_path):
     """
@@ -95,19 +94,12 @@ def clean_transcript_text(text):
     if not isinstance(text, str):
         return ""
 
-    # 1. Remove non-speech events in brackets or parentheses
     text = re.sub(r'\[.*?\]', '', text)
     text = re.sub(r'\(.*?\)', '', text)
-    
-    # 2. Remove common non-verbal filler words
     filler_words = r'\b(um|uh|hmm|mhm)\b'
     text = re.sub(filler_words, '', text, flags=re.IGNORECASE)
-
-    # 3. Remove artifacts like ellipses and asterisks
     text = text.replace('...', ' ')
     text = text.replace('*', '')
-
-    # 4. Normalize whitespace
     text = re.sub(r'\s+', ' ', text)
     
     return text.strip()
@@ -119,7 +111,6 @@ def transcribe_audio(file_path):
     """
     print(f"Starting optimized transcription for: {file_path}")
     
-    # --- Metrics Initialization ---
     metrics = {
         "speaker_count": 0,
         "raw_segment_count": 0,
@@ -128,9 +119,7 @@ def transcribe_audio(file_path):
         "raw_text_length": 0,
         "clean_text_length": 0
     }
-    # --- End Metrics ---
 
-    # 1. Run diarization
     segments, speaker_count = diarize_audio(file_path)
     transcript = ""
     metrics["speaker_count"] = speaker_count
@@ -144,9 +133,8 @@ def transcribe_audio(file_path):
         
         transcript = clean_transcript_text(raw_text)
         metrics["clean_text_length"] = len(transcript)
-        return transcript, metrics # Return transcript and metrics
+        return transcript, metrics 
 
-    # --- Segment Merging Logic ---
     print(f"Diarization found {len(segments)} raw segments. Merging...")
     merged_segments = []
     if segments:
@@ -166,18 +154,14 @@ def transcribe_audio(file_path):
         metrics["segment_reduction_percent"] = round(reduction * 100, 2)
     
     print(f"Merged into {len(merged_segments)} segments for transcription.")
-    # --- End of Merging Logic ---
 
-
-    # 2. Load the audio file ONCE
     print("Loading audio file into memory for slicing...")
     try:
         audio_segment = AudioSegment.from_file(file_path)
     except Exception as e:
         print(f"Failed to load audio file {file_path}: {e}")
-        return "", metrics # Return empty transcript and metrics on failure
+        return "", metrics 
 
-    # 3. Process the NEW `merged_segments` list
     for idx, seg in enumerate(merged_segments):
         print(f"Processing merged segment {idx+1}/{len(merged_segments)} - {seg['speaker']} ({seg['start']:.2f}s → {seg['end']:.2f}s)")
         try:
@@ -196,7 +180,6 @@ def transcribe_audio(file_path):
             raw_text = " ".join(text_value) if isinstance(text_value, list) else str(text_value)
             metrics["raw_text_length"] += len(raw_text)
             
-            # Call the cleaning function
             text = clean_transcript_text(raw_text)
             metrics["clean_text_length"] += len(text)
             
@@ -207,10 +190,10 @@ def transcribe_audio(file_path):
             print(f"Error in merged segment {idx+1}: {e}")
 
     print("Transcription complete with speakers.")
-    return transcript.strip(), metrics # Return transcript and metrics
+    return transcript.strip(), metrics 
 
 
-def get_summary(transcript, metrics): # Pass metrics in
+def get_summary(transcript, metrics): 
     """
     Use Gemini model to summarize and extract key details from any transcript.
     """
@@ -240,7 +223,6 @@ def get_summary(transcript, metrics): # Pass metrics in
         summary_data = json.loads(clean_response_text)
         print("Summary generated successfully.")
         
-        # --- Add Summary Metrics ---
         summary_text = summary_data.get("summary", "")
         metrics["summary_length"] = len(summary_text)
         if metrics["clean_text_length"] > 0:
@@ -248,7 +230,6 @@ def get_summary(transcript, metrics): # Pass metrics in
             metrics["compression_ratio_percent"] = round(max(0, ratio) * 100, 2)
         else:
             metrics["compression_ratio_percent"] = 0.0
-        # --- End Summary Metrics ---
         
         return summary_data
     except Exception as e:
@@ -263,7 +244,7 @@ def home():
 
 @app.route('/upload_audio', methods=['POST'])
 def upload_audio_file():
-    start_time = time.time() # Start timer
+    start_time = time.time() 
     
     if 'audio_file' not in request.files:
         return "Error: No audio file found."
@@ -280,25 +261,20 @@ def upload_audio_file():
         if not standardized_audio_path:
             return "Error: Could not process and standardize audio file."
 
-        # Capture both transcript and metrics
         transcript, metrics = transcribe_audio(standardized_audio_path)
-        
-        # Pass metrics to summary function
         summary_data = get_summary(transcript, metrics)
         
-        # Finalize metrics
         end_time = time.time()
         metrics["total_processing_time_sec"] = round(end_time - start_time, 2)
         
         return render_template(
-            'index.html', 
+            'index.html',
             transcript=transcript, 
             summary_data=summary_data, 
-            metrics=metrics, # Pass metrics to template
+            metrics=metrics, 
             default_tab='audio'
         )
     finally:
-        # Clean up both files
         if standardized_audio_path and os.path.exists(standardized_audio_path):
             os.remove(standardized_audio_path)
         if os.path.exists(original_filepath):
@@ -307,7 +283,7 @@ def upload_audio_file():
 
 @app.route('/upload_video', methods=['POST'])
 def upload_video_file():
-    start_time = time.time() # Start timer
+    start_time = time.time() 
     
     if 'video_file' not in request.files:
         return "Error: No video file found."
@@ -324,13 +300,9 @@ def upload_video_file():
         if not standardized_audio_path:
             return "Error: Could not extract audio from video."
 
-        # Capture both transcript and metrics
         transcript, metrics = transcribe_audio(standardized_audio_path)
-        
-        # Pass metrics to summary function
         summary_data = get_summary(transcript, metrics)
 
-        # Finalize metrics
         end_time = time.time()
         metrics["total_processing_time_sec"] = round(end_time - start_time, 2)
 
@@ -338,11 +310,10 @@ def upload_video_file():
             'index.html', 
             transcript=transcript, 
             summary_data=summary_data, 
-            metrics=metrics, # Pass metrics to template
+            metrics=metrics, 
             default_tab='video'
         )
     finally:
-        # Clean up both files
         if standardized_audio_path and os.path.exists(standardized_audio_path):
             os.remove(standardized_audio_path)
         if os.path.exists(video_filepath):
@@ -351,24 +322,23 @@ def upload_video_file():
 
 @app.route('/summarize_text', methods=['POST'])
 def summarize_text():
-    start_time = time.time() # Start timer
+    start_time = time.time() 
     
     text_input = request.form.get('text_input')
     if not text_input:
         return "Error: No text provided."
 
-    # --- Metrics for text-only ---
     metrics = {
         "speaker_count": "N/A",
         "raw_segment_count": "N/A",
         "merged_segment_count": "N/A",
         "segment_reduction_percent": "N/A",
         "raw_text_length": len(text_input),
-        "clean_text_length": len(text_input), # Assume text is pre-cleaned
+        "clean_text_length": len(text_input), 
     }
     
-    transcript = text_input # Use raw text as transcript
-    summary_data = get_summary(transcript, metrics) # Pass metrics
+    transcript = text_input 
+    summary_data = get_summary(transcript, metrics) 
     
     end_time = time.time()
     metrics["total_processing_time_sec"] = round(end_time - start_time, 2)
@@ -377,10 +347,43 @@ def summarize_text():
         'index.html', 
         transcript=transcript, 
         summary_data=summary_data, 
-        metrics=metrics, # Pass metrics to template
+        metrics=metrics, 
         default_tab='text'
     )
+    
+@app.route('/ask_question', methods=['POST'])
+def ask_question():
+    data = request.get_json()
+    if not data or 'transcript' not in data or 'question' not in data:
+        return jsonify({"error": "Missing transcript or question"}), 400
 
+    transcript = data['transcript']
+    question = data['question']
+
+    model = genai.GenerativeModel("gemini-pro-latest") #type:ignore
+    
+    prompt = f"""
+    You are a helpful assistant. Answer the following question based *only* on the provided transcript.
+    Do not use any external knowledge.
+    If the answer is not found in the transcript, state clearly: "I'm sorry, that information is not available in the transcript."
+
+    Transcript:
+    ---
+    {transcript}
+    ---
+
+    Question: {question}
+
+    Answer:
+    """
+
+    try:
+        response = model.generate_content(prompt)
+        answer = response.text.strip()
+        return jsonify({"answer": answer})
+    except Exception as e:
+        print(f"Error asking question: {e}")
+        return jsonify({"error": "An error occurred while generating the answer."}), 500
 
 
 if __name__ == '__main__':
