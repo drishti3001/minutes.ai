@@ -16,13 +16,12 @@
             </div>
 
             <div class="tab-buttons">
-                <button class="tab-btn {% if default_tab == 'audio' %}active{% endif %}" data-tab="audio">Audio</button>
+                <button class="tab-btn {% if default_tab == 'audio' or not default_tab %}active{% endif %}" data-tab="audio">Audio</button>
                 <button class="tab-btn {% if default_tab == 'video' %}active{% endif %}" data-tab="video">Video</button>
                 <button class="tab-btn {% if default_tab == 'text' %}active{% endif %}" data-tab="text">Text</button>
             </div>
 
-            <!-- AUDIO TAB -->
-            <div class="tab-content {% if default_tab == 'audio' %}active{% endif %}" id="audio">
+            <div class="tab-content {% if default_tab == 'audio' or not default_tab %}active{% endif %}" id="audio">
                 <form class="upload-form" action="/upload_audio" method="post" enctype="multipart/form-data">
                     <label for="audio_file" class="file-label">
                         <div>
@@ -31,12 +30,6 @@
                         </div>
                     </label>
                     <input type="file" name="audio_file" id="audio_file" class="file-input" accept="audio/*" required>
-                    {% if uploaded_audio %}
-                        <audio controls class="preview-player">
-                            <source src="{{ url_for('static', filename=uploaded_audio) }}" type="audio/mpeg">
-                            Your browser does not support the audio element.
-                        </audio>
-                    {% endif %}
                     <input type="submit" value="Summarize Audio" class="submit-btn">
                 </form>
 
@@ -62,11 +55,25 @@
                             {% endfor %}
                         </ul>
                     {% endif %}
+                    
+                    <div class="transcript-qa-section">
+                        <button type="button" class="collapsible">Show Transcript</button>
+                        <div class="content transcript-content">
+                            <pre>{{ transcript }}</pre>
+                        </div>
+                        <div id="transcript-data-{{ default_tab }}" style="display: none;">{{ transcript }}</div>
+                        <div class="qa-form">
+                            <h3>Ask a Question</h3>
+                            <p>Ask a question based on the transcript above.</p>
+                            <input type="text" id="question_input-{{ default_tab }}" class="qa-input" placeholder="e.g., 'What was the final decision?'">
+                            <button type="button" class="submit-btn qa-btn" data-tab-id="{{ default_tab }}">Ask</button>
+                            <div id="answer_display-{{ default_tab }}" class="qa-answer"></div>
+                        </div>
+                    </div>
                 </div>
                 {% endif %}
             </div>
 
-            <!-- VIDEO TAB -->
             <div class="tab-content {% if default_tab == 'video' %}active{% endif %}" id="video">
                 <form class="upload-form" action="/upload_video" method="post" enctype="multipart/form-data">
                     <label for="video_file" class="file-label">
@@ -76,12 +83,6 @@
                         </div>
                     </label>
                     <input type="file" name="video_file" id="video_file" class="file-input" accept="video/*" required>
-                    {% if uploaded_video %}
-                        <video controls class="preview-player">
-                            <source src="{{ url_for('static', filename=uploaded_video) }}" type="video/mp4">
-                            Your browser does not support the video element.
-                        </video>
-                    {% endif %}
                     <input type="submit" value="Summarize Video" class="submit-btn">
                 </form>
 
@@ -89,7 +90,6 @@
                 <div class="card results-card">
                     <h2>Video Summary</h2>
                     <p>{{ summary_data.summary }}</p>
-
                     {% if summary_data.decisions %}
                         <h2>Key Decisions</h2>
                         <ul>
@@ -98,7 +98,6 @@
                             {% endfor %}
                         </ul>
                     {% endif %}
-
                     {% if summary_data.action_items %}
                         <h2>Action Items</h2>
                         <ul>
@@ -107,14 +106,29 @@
                             {% endfor %}
                         </ul>
                     {% endif %}
+                    
+                    <div class="transcript-qa-section">
+                        <button type="button" class="collapsible">Show Transcript</button>
+                        <div class="content transcript-content">
+                            <pre>{{ transcript }}</pre>
+                        </div>
+                        <div id="transcript-data-{{ default_tab }}" style="display: none;">{{ transcript }}</div>
+                        <div class="qa-form">
+                            <h3>Ask a Question</h3>
+                            <p>Ask a question based on the transcript above.</p>
+                            <input type="text" id="question_input-{{ default_tab }}" class="qa-input" placeholder="e.g., 'What was the final decision?'">
+                            <button type="button" class="submit-btn qa-btn" data-tab-id="{{ default_tab }}">Ask</button>
+                            <div id="answer_display-{{ default_tab }}" class="qa-answer"></div>
+                        </div>
+                    </div>
                 </div>
                 {% endif %}
             </div>
 
-            <!-- TEXT TAB -->
             <div class="tab-content {% if default_tab == 'text' %}active{% endif %}" id="text">
                 <form class="upload-form" action="/summarize_text" method="post">
-                    <textarea name="text_input" class="text-input" placeholder="Paste your full transcript or text here...">{{ transcript if default_tab == 'text' else '' }}</textarea>
+                    <label for="text_input" class="sr-only">Text to summarize</label>
+                    <textarea name="text_input" id="text_input" class="text-input" placeholder="Paste your full transcript or text here...">{{ transcript if default_tab == 'text' else '' }}</textarea>
                     <input type="submit" value="Summarize Text" class="submit-btn">
                 </form>
 
@@ -122,7 +136,6 @@
                 <div class="card results-card">
                     <h2>Text Summary</h2>
                     <p>{{ summary_data.summary }}</p>
-
                     {% if summary_data.decisions %}
                         <h2>Key Decisions</h2>
                         <ul>
@@ -131,7 +144,6 @@
                             {% endfor %}
                         </ul>
                     {% endif %}
-
                     {% if summary_data.action_items %}
                         <h2>Action Items</h2>
                         <ul>
@@ -143,27 +155,122 @@
                 </div>
                 {% endif %}
             </div>
+
         </div>
     </div>
 
     <script>
-        // Tab switching
-        const tabButtons = document.querySelectorAll(".tab-btn");
-        const tabContents = document.querySelectorAll(".tab-content");
+        document.addEventListener("DOMContentLoaded", function() {
+            // Tab switching
+            const tabButtons = document.querySelectorAll(".tab-btn");
+            const tabContents = document.querySelectorAll(".tab-content");
+            const defaultTab = '{{ default_tab | default("audio") }}';
 
-        tabButtons.forEach(button => {
-            button.addEventListener("click", () => {
-                tabButtons.forEach(btn => btn.classList.remove("active"));
-                tabContents.forEach(content => content.classList.remove("active"));
-                button.classList.add("active");
-                document.getElementById(button.dataset.tab).classList.add("active");
+            // --- THIS IS THE CORRECTED, ROBUST FUNCTION ---
+            function openTab(tabName) {
+                // First, remove 'active' from all tabs and content
+                tabContents.forEach(content => {
+                    content.classList.remove("active");
+                });
+                tabButtons.forEach(button => {
+                    button.classList.remove("active");
+                });
+
+                // Find the new content tab to activate
+                const contentToActivate = document.getElementById(tabName);
+                if (contentToActivate) {
+                    contentToActivate.classList.add("active");
+                } else {
+                    console.error("Could not find tab content with id:", tabName);
+                }
+
+                // Find the new button to activate
+                const buttonToActivate = document.querySelector(`.tab-btn[data-tab="${tabName}"]`);
+                if (buttonToActivate) {
+                    buttonToActivate.classList.add("active");
+                } else {
+                    console.error("Could not find tab button with data-tab:", tabName);
+                }
+            }
+
+            // Set the correct tab active on page load
+            openTab(defaultTab);
+
+            // Add click listeners to buttons
+            tabButtons.forEach(button => {
+                button.addEventListener("click", () => {
+                    openTab(button.dataset.tab);
+                });
             });
-        });
 
-        // Set the correct tab active based on default_tab
-        const defaultTab = '{{ default_tab | default("audio") }}';
-        const activeButton = document.querySelector(`.tab-btn[data-tab="${defaultTab}"]`);
-        if (activeButton) activeButton.click();
+            // Collapsible Transcript Toggle
+            const collapsibles = document.querySelectorAll(".collapsible");
+            collapsibles.forEach(button => {
+                button.addEventListener("click", function() {
+                    this.classList.toggle("active");
+                    const content = this.nextElementSibling; 
+                    if (content.style.display === "block") {
+                        content.style.display = "none";
+                        this.textContent = "Show Transcript";
+                    } else {
+                        content.style.display = "block";
+                        this.textContent = "Hide Transcript";
+                    }
+                });
+            });
+
+            // Q&A "Ask" Button
+            const qaButtons = document.querySelectorAll(".qa-btn");
+            qaButtons.forEach(button => {
+                button.addEventListener("click", function() {
+                    const tabId = this.dataset.tabId;
+                    const questionInput = document.getElementById(`question_input-${tabId}`);
+                    const transcriptData = document.getElementById(`transcript-data-${tabId}`);
+                    const answerDisplay = document.getElementById(`answer_display-${tabId}`);
+
+                    const question = questionInput.value;
+                    const transcript = transcriptData.textContent;
+
+                    if (!question.trim()) {
+                        answerDisplay.textContent = "Please enter a question.";
+                        answerDisplay.style.color = '#d93025';
+                        answerDisplay.style.display = 'block';
+                        return;
+                    }
+
+                    answerDisplay.textContent = "Asking Gemini...";
+                    answerDisplay.style.color = '#606770';
+                    answerDisplay.style.display = 'block';
+
+                    fetch('/ask_question', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                        },
+                        body: JSON.stringify({
+                            transcript: transcript,
+                            question: question
+                        })
+                    })
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.error) {
+                            answerDisplay.textContent = `Error: ${data.error}`;
+                            answerDisplay.style.color = '#d90000'; // Made error color more prominent
+                        } else {
+                            answerDisplay.innerHTML = data.answer.replace(/\n/g, '<br>');
+                            answerDisplay.style.color = '#3c4043';
+                        }
+                    })
+                    .catch(error => {
+                        console.error('Error:', error);
+                        answerDisplay.textContent = 'An error occurred. Please try again.';
+                        answerDisplay.style.color = '#d90000';
+                    });
+                });
+            });
+            
+        });
     </script>
 
 </body>
